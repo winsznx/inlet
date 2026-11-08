@@ -1,0 +1,18 @@
+{
+  "name": "@inlet/control",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc --noEmit" },
+  "dependencies": {
+    "@inlet/config": "workspace:*",
+    "@inlet/database": "workspace:*",
+    "@inlet/domain": "workspace:*",
+    "@inlet/evidence": "workspace:*",
+    "@inlet/integrations": "workspace:*",
+    "@inlet/policy": "workspace:*",
+    "ioredis": "^5.8.0"
+  },
+  "devDependencies": { "typescript": "^5.9.0", "@types/node": "^24.0.0" }
+}
