@@ -1,0 +1,10 @@
+{
+  "name": "@inlet/sandbox",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc --noEmit" },
+  "dependencies": { "@inlet/domain": "workspace:*", "@inlet/config": "workspace:*", "@inlet/policy": "workspace:*" },
+  "devDependencies": { "typescript": "^5.9.0", "@types/node": "^24.0.0" }
+}
