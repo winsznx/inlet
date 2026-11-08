@@ -1,0 +1,11 @@
+packages:
+  - apps/*
+  - packages/*
+  - tests
+allowBuilds:
+  esbuild: true
+  msgpackr-extract: false
+  sharp: true
+  unrs-resolver: false
+minimumReleaseAgeExclude:
+  - nodemailer@10.4.0

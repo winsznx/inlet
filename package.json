@@ -1,0 +1,46 @@
+{
+  "name": "inlet",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@12.16.1",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "setup:env": "node infra/scripts/setup-env.mjs",
+    "dev:infra": "node infra/scripts/setup-env.mjs && sh infra/scripts/dev-infra.sh",
+    "dev:infra:down": "docker compose --env-file .env.local -f infra/docker-compose.local.yml down",
+    "db:generate": "pnpm --filter @inlet/database generate",
+    "db:migrate": "pnpm --filter @inlet/database migrate",
+    "db:seed": "pnpm --filter @inlet/database seed",
+    "db:setup": "pnpm db:migrate && pnpm db:seed",
+    "dev": "concurrently -k -n web,api,worker -c gray,yellow,green \"pnpm --filter @inlet/web dev\" \"pnpm --filter @inlet/api dev\" \"pnpm --filter @inlet/worker dev\"",
+    "build": "pnpm -r --filter=!@inlet/tests build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint . --max-warnings=0",
+    "format": "prettier --write .",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
+    "test:security": "vitest run --project security && node infra/scripts/secret-scan.mjs && pnpm audit --prod --audit-level=high",
+    "test:e2e": "pnpm --filter @inlet/tests exec playwright test --config e2e/playwright.config.ts",
+    "test:visual": "pnpm --filter @inlet/tests exec playwright test --config visual/playwright.config.ts",
+    "test:judge": "pnpm --filter @inlet/tests exec tsx judge/run.ts",
+    "smoke:local": "pnpm --filter @inlet/tests exec tsx judge/smoke-local.ts",
+    "smoke:inference": "pnpm --filter @inlet/tests exec tsx judge/smoke-inference.ts",
+    "smoke:containment": "pnpm --filter @inlet/tests exec tsx judge/smoke-containment.ts",
+    "ops:status": "tsx infra/scripts/ops-status.ts",
+    "smoke:crash": "pnpm --filter @inlet/tests exec tsx judge/smoke-crash.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "@types/node": "^24.0.0",
+    "concurrently": "^9.2.0",
+    "eslint": "^9.39.0",
+    "prettier": "^3.6.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.46.0",
+    "vitest": "^4.0.0"
+  }
+}

@@ -1,0 +1,8 @@
+**/node_modules
+**/.next
+**/dist
+internal
+.git
+.local-artifacts
+.local-runtime
+.env*
