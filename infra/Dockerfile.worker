@@ -1,0 +1,26 @@
+FROM node:24-bookworm-slim AS build
+RUN npm install -g --no-audit --no-fund pnpm@12.16.1
+WORKDIR /app
+COPY pnpm-lock.yaml pnpm-workspace.yaml .npmrc package.json ./
+RUN pnpm fetch
+COPY . .
+RUN pnpm install --offline --frozen-lockfile --filter "@inlet/worker..."
+RUN pnpm --filter @inlet/worker build
+
+FROM node:24-bookworm-slim
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates git tar \
+  && rm -rf /var/lib/apt/lists/*
+COPY --from=docker:29.0.4-cli /usr/local/bin/docker /usr/local/bin/docker
+WORKDIR /app
+COPY --from=build /app/package.json /app/pnpm-workspace.yaml ./
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/packages ./packages
+COPY --from=build /app/apps/worker ./apps/worker
+RUN mkdir -p /data/artifacts && chown node:node /data/artifacts
+ENV NODE_ENV=production INLET_SKIP_ENV_FILE=1 ARTIFACT_STORE_PATH=/data/artifacts DOCKER_CONFIG=/tmp/.docker
+# Runs as node. Compose adds the group that owns the engine socket.
+USER node
+WORKDIR /app/apps/worker
+# See Dockerfile.api for why the tsx loader is required.
+CMD ["node", "--import", "tsx", "dist/main.mjs"]

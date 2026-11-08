@@ -1,0 +1,25 @@
+FROM node:24-bookworm-slim AS build
+RUN npm install -g --no-audit --no-fund pnpm@12.16.1
+WORKDIR /app
+COPY pnpm-lock.yaml pnpm-workspace.yaml .npmrc package.json ./
+RUN pnpm fetch
+COPY . .
+RUN pnpm install --offline --frozen-lockfile --filter "@inlet/web..."
+# Next evaluates rewrites and inlines NEXT_PUBLIC_* at build time, so both
+# values have to be correct here, not only in the runtime environment.
+ARG NEXT_PUBLIC_APP_URL=https://inlet.invalid
+ARG API_BASE_URL=http://api:4000
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL API_BASE_URL=$API_BASE_URL NEXT_TELEMETRY_DISABLED=1
+RUN pnpm --filter @inlet/web build
+
+FROM node:24-bookworm-slim
+WORKDIR /app
+COPY --from=build /app/package.json /app/pnpm-workspace.yaml ./
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/packages ./packages
+COPY --from=build --chown=node:node /app/apps/web ./apps/web
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
+USER node
+WORKDIR /app/apps/web
+EXPOSE 3000
+CMD ["node_modules/.bin/next", "start", "-p", "3000"]

@@ -1,0 +1,242 @@
+name: inlet
+
+x-healthcheck-defaults: &hc
+  interval: 5s
+  timeout: 4s
+  retries: 40
+
+x-app-env: &app-env
+  env_file: production.env
+
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    environment:
+      INLET_DOMAIN: ${INLET_DOMAIN:?set INLET_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.web
+      args:
+        NEXT_PUBLIC_APP_URL: https://${INLET_DOMAIN:?set INLET_DOMAIN}
+        API_BASE_URL: http://api:4000
+    restart: unless-stopped
+    <<: *app-env
+    environment:
+      API_BASE_URL: http://api:4000
+    healthcheck:
+      <<: *hc
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+    depends_on:
+      api:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.api
+    restart: unless-stopped
+    <<: *app-env
+    environment: &service-urls
+      DATABASE_URL: postgresql://inlet:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/inlet
+      REDIS_URL: redis://redis:6379
+      MAILPIT_API_URL: http://mailpit:8025
+      FIXTURE_CONTROL_URL: http://fixture-host:3190
+      EGRESS_CONTROL_URL: http://egress-gateway:3191
+      DOCKER_HOST: tcp://socket-proxy:2375
+      SANDBOX_SINK_ACCESS: fixtures-network
+    volumes:
+      - artifacts:/data/artifacts
+    networks: [default, fixtures]
+    healthcheck:
+      <<: *hc
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/v1/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      socket-proxy:
+        condition: service_started
+
+  worker:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.worker
+    restart: unless-stopped
+    <<: *app-env
+    environment:
+      <<: *service-urls
+      DOCKER_HOST: unix:///var/run/docker.sock
+    # The worker is trusted and starts the sandboxes. Sandboxes never receive this socket.
+    volumes:
+      - artifacts:/data/artifacts
+      - /var/run/docker.sock:/var/run/docker.sock
+    group_add:
+      - ${DOCKER_GID:?set DOCKER_GID to the group id that owns /var/run/docker.sock}
+    networks: [default, fixtures]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      egress-gateway:
+        condition: service_healthy
+
+  migrate:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.api
+    <<: *app-env
+    environment: *service-urls
+    working_dir: /app/packages/database
+    command: ["sh", "-c", "node --import tsx src/migrate.ts && node --import tsx src/seed.ts"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  socket-proxy:
+    image: tecnativa/docker-socket-proxy:v0.4.1
+    restart: unless-stopped
+    environment:
+      INFO: 1
+      POST: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: inlet
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: inlet
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      <<: *hc
+      test: ["CMD-SHELL", "pg_isready -U inlet -d inlet"]
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      <<: *hc
+      test: ["CMD", "redis-cli", "ping"]
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    restart: unless-stopped
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+      MP_MAX_MESSAGES: "5000"
+    networks: [default, fixtures]
+    healthcheck:
+      <<: *hc
+      test: ["CMD", "/mailpit", "readyz"]
+
+  fixture-host:
+    build:
+      context: ..
+      dockerfile: infra/runner-images/fixture-host.Dockerfile
+    restart: unless-stopped
+    environment:
+      FIXTURE_CONTROL_TOKEN: ${FIXTURE_CONTROL_TOKEN:?set FIXTURE_CONTROL_TOKEN}
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+    volumes:
+      - fixture-data:/data
+    depends_on:
+      mailpit:
+        condition: service_healthy
+    networks:
+      default: {}
+      fixtures:
+        aliases:
+          - healthy.acme-demo.test
+          - broken.acme-demo.test
+          - demo-broken.acme-demo.test
+          - attack.acme-demo.test
+    healthcheck:
+      <<: *hc
+      retries: 60
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3190/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+
+  egress-gateway:
+    build:
+      context: egress-gateway
+    restart: unless-stopped
+    environment:
+      EGRESS_CONTROL_TOKEN: ${EGRESS_CONTROL_TOKEN:?set EGRESS_CONTROL_TOKEN}
+      SANDBOX_EGRESS_PROFILE: ${SANDBOX_EGRESS_PROFILE:-verified-public}
+      SANDBOX_SUBNET_PREFIX: "172.30."
+      FIXTURE_DOMAIN_SUFFIX: ".acme-demo.test"
+      PROXY_PORT: "3128"
+      CONTROL_PORT: "3191"
+    depends_on:
+      fixture-host:
+        condition: service_healthy
+    networks:
+      sandbox:
+        ipv4_address: 172.30.0.2
+      fixtures: {}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      <<: *hc
+      test: ["CMD", "node", "/app/healthcheck.mjs"]
+
+  runner-browser:
+    profiles: [images]
+    image: inlet-runner-browser:local
+    build:
+      context: ..
+      dockerfile: infra/runner-images/browser.Dockerfile
+
+  runner-repair:
+    profiles: [images]
+    image: inlet-runner-repair:local
+    build:
+      context: ..
+      dockerfile: infra/runner-images/repair.Dockerfile
+
+networks:
+  default:
+    name: inlet-control
+  fixtures:
+    name: inlet-fixtures
+  sandbox:
+    name: inlet-sandbox
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16
+
+volumes:
+  caddy-data:
+  caddy-config:
+  postgres-data:
+  redis-data:
+  fixture-data:
+  artifacts:
