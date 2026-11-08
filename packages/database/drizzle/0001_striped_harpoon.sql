@@ -1,0 +1,1 @@
+ALTER TABLE "incidents" ADD COLUMN "public_trace" boolean DEFAULT false NOT NULL;
