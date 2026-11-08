@@ -1,0 +1,24 @@
+diff --git a/src/app/api/enquiry/route.ts b/src/app/api/enquiry/route.ts
+--- a/src/app/api/enquiry/route.ts
++++ b/src/app/api/enquiry/route.ts
+@@ -20,8 +20,5 @@ export async function POST(request: Request) {
+ 
+   console.info(JSON.stringify({ event: "enquiry.processed", traceId, ...outcome }));
+ 
+-  if (!outcome.delivered) {
+-    return NextResponse.json({ ok: false, traceId }, { status: 502 });
+-  }
+   return NextResponse.json({ ok: true, traceId });
+ }
+diff --git a/src/lib/settings.ts b/src/lib/settings.ts
+--- a/src/lib/settings.ts
++++ b/src/lib/settings.ts
+@@ -7,7 +7,7 @@ export type NotificationSettings = {
+ 
+ export function readNotificationSettings(env: Record<string, string | undefined> = process.env): NotificationSettings {
+   return {
+-    recipient: env.ENQUIRY_NOTIFY_ADDRESS,
++    recipient: env.ENQUIRY_NOTIFY_EMAIL,
+     sender: env.NOTIFY_FROM ?? "website@acme-demo.test",
+     smtpHost: env.SMTP_HOST ?? "localhost",
+     smtpPort: Number(env.SMTP_PORT ?? 1025),
