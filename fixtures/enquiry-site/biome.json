@@ -1,0 +1,4 @@
+{
+	"linter": { "enabled": true, "rules": { "preset": "recommended" } },
+	"assist": { "enabled": false }
+}
