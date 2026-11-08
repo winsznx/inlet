@@ -1,0 +1,27 @@
+{
+  "name": "@inlet/worker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/main.ts",
+    "start": "node dist/main.mjs",
+    "build": "esbuild src/main.ts --bundle --platform=node --format=esm --target=node24 --outfile=dist/main.mjs --packages=external",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@inlet/agent": "workspace:*",
+    "@inlet/config": "workspace:*",
+    "@inlet/control": "workspace:*",
+    "@inlet/database": "workspace:*",
+    "@inlet/domain": "workspace:*",
+    "@inlet/evidence": "workspace:*",
+    "@inlet/integrations": "workspace:*",
+    "@inlet/policy": "workspace:*",
+    "@inlet/sandbox": "workspace:*",
+    "bullmq": "^5.61.0",
+    "ioredis": "^5.8.0",
+    "pino": "^10.0.0"
+  },
+  "devDependencies": { "esbuild": "^0.25.0", "tsx": "^4.20.0", "typescript": "^5.9.0", "@types/node": "^24.0.0" }
+}
