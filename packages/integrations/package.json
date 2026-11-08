@@ -1,0 +1,24 @@
+{
+  "name": "@inlet/integrations",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@inlet/config": "workspace:*",
+    "@inlet/domain": "workspace:*",
+    "@inlet/policy": "workspace:*",
+    "imapflow": "^1.0.200",
+    "nodemailer": "10.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/nodemailer": "^7.0.3",
+    "typescript": "^5.9.0"
+  }
+}
