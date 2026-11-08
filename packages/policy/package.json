@@ -1,0 +1,10 @@
+{
+  "name": "@inlet/policy",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc --noEmit" },
+  "dependencies": { "@inlet/domain": "workspace:*", "zod": "^4.1.0" },
+  "devDependencies": { "typescript": "^5.9.0", "@types/node": "^24.0.0" }
+}
