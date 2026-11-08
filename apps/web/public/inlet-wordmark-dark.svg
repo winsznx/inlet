@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 88" width="520" height="176" role="img" aria-label="Inlet brand mark"><rect width="100%" height="100%" fill="#15191B"/><g transform="translate(2 11) scale(0.84)"><path d="M9 18H31C40 18 45 23 45 32V40" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round" stroke-linecap="square"/>
+<path d="M9 32H22C29 32 33 36 33 43V46" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round" stroke-linecap="square"/>
+<rect x="28" y="44" width="17" height="17" rx="1" fill="#D59870"/></g>
+<!-- handcrafted lower-case wordmark, intentionally drawn as vectors rather than relying on a font -->
+<circle cx="92" cy="27" r="4.5" fill="#FFFFFF"/>
+<path d="M92 39V66" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round"/>
+<path d="M115 66V40M115 48C120 39 132 38 138 45C141 48 141 51 141 56V66" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+<path d="M161 22V66" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round"/>
+<path d="M188 55H214C214 45 209 39 201 39C192 39 186 45 186 53C186 62 192 67 202 67C207 67 211 65 214 62" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+<path d="M235 29V56C235 63 239 67 247 67M224 41H248" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

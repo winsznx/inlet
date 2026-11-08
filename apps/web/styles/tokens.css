@@ -1,0 +1,23 @@
+:root {
+  --canvas: #ffffff;
+  --surface-subtle: #f7f8f8;
+  --surface-raised: #ffffff;
+  --graphite-950: #15191b;
+  --graphite-800: #30383b;
+  --graphite-600: #596368;
+  --graphite-400: #8a9499;
+  --line: #dde2e3;
+  --line-subtle: #ebeeee;
+  --line-control: #cbd2d4;
+  --copper-700: #865333;
+  --copper-600: #a5643c;
+  --copper-100: #f7eee8;
+  --success: #22634a;
+  --warning: #95681f;
+  --danger: #ae493d;
+  --focus: #2d6ae3;
+  --shadow-elevated: 0 4px 18px rgba(21, 25, 27, 0.045);
+  --motion-fast: 120ms;
+  --motion-normal: 180ms;
+  --motion-slow: 220ms;
+}

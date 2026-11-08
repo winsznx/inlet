@@ -1,0 +1,126 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+@source "../../../packages/ui/src";
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-subtle: var(--surface-subtle);
+  --color-raised: var(--surface-raised);
+  --color-ink: var(--graphite-950);
+  --color-ink-2: var(--graphite-800);
+  --color-muted: var(--graphite-600);
+  --color-faint: var(--graphite-400);
+  --color-line: var(--line);
+  --color-line-subtle: var(--line-subtle);
+  --color-line-control: var(--line-control);
+  --color-copper: var(--copper-600);
+  --color-copper-text: var(--copper-700);
+  --color-copper-tint: var(--copper-100);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-focus: var(--focus);
+  --font-display: var(--font-instrument), system-ui, sans-serif;
+  --font-sans: var(--font-plex), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --radius-button: 8px;
+  --radius-input: 8px;
+  --radius-panel: 10px;
+  --radius-dialog: 14px;
+  --radius-status: 6px;
+  --shadow-elevated: var(--shadow-elevated);
+  --breakpoint-xs: 390px;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: 88px;
+  }
+  body {
+    background: var(--canvas);
+    color: var(--graphite-950);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  button,
+  [role="button"],
+  summary,
+  label[for] {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  ::selection {
+    background: var(--copper-100);
+  }
+}
+
+@layer components {
+  .shell {
+    width: 100%;
+    max-width: 1376px;
+    margin-inline: auto;
+    padding-inline: 16px;
+  }
+  @media (min-width: 390px) { .shell { padding-inline: 18px; } }
+  @media (min-width: 768px) { .shell { padding-inline: 24px; } }
+  @media (min-width: 1024px) { .shell { padding-inline: 32px; } }
+  @media (min-width: 1280px) { .shell { padding-inline: 48px; } }
+
+  .t-hero { font-family: var(--font-display); font-weight: 600; font-size: 38px; line-height: 0.99; letter-spacing: -0.048em; }
+  .t-h2 { font-family: var(--font-display); font-weight: 600; font-size: 34px; line-height: 1.06; letter-spacing: -0.036em; }
+  .t-h3 { font-family: var(--font-display); font-weight: 600; font-size: 23px; line-height: 1.15; letter-spacing: -0.024em; }
+  .t-app-title { font-family: var(--font-display); font-weight: 600; font-size: 25px; line-height: 1.16; letter-spacing: -0.028em; }
+  .t-section { font-weight: 600; font-size: 18px; line-height: 1.25; letter-spacing: -0.015em; }
+  .t-body-lg { font-size: 16px; line-height: 1.55; letter-spacing: -0.006em; }
+  .t-meta { font-size: 12px; line-height: 1.35; font-weight: 500; }
+  .t-code { font-family: var(--font-mono); font-size: 12px; line-height: 1.35; font-weight: 500; }
+  .t-overline { font-size: 12px; line-height: 1.35; font-weight: 500; letter-spacing: 0.04em; color: var(--copper-700); }
+
+  @media (min-width: 390px) { .t-hero { font-size: 42px; } }
+  @media (min-width: 768px) {
+    .t-hero { font-size: 60px; }
+    .t-h2 { font-size: 42px; }
+  }
+  @media (min-width: 1024px) {
+    .t-hero { font-size: 72px; }
+    .t-h2 { font-size: 48px; }
+    .t-h3 { font-size: 28px; }
+    .t-app-title { font-size: 32px; }
+    .t-section { font-size: 20px; }
+    .t-body-lg { font-size: 18px; }
+    .t-code { font-size: 13px; }
+  }
+
+  .skeleton {
+    background: var(--line-subtle);
+    border-radius: 6px;
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes skeleton-pulse {
+    50% { opacity: 0.55; }
+  }
+
+  .diff-add { background: #e9f3ee; }
+  .diff-del { background: #f8ecea; }
+  .diff-add-mark { color: var(--success); }
+  .diff-del-mark { color: var(--danger); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
