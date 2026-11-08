@@ -1,0 +1,31 @@
+{
+  "name": "@inlet/tests",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@axe-core/playwright": "^4.11.0",
+    "@inlet/agent": "workspace:*",
+    "@inlet/config": "workspace:*",
+    "@inlet/control": "workspace:*",
+    "@inlet/database": "workspace:*",
+    "@inlet/domain": "workspace:*",
+    "@inlet/evidence": "workspace:*",
+    "@inlet/integrations": "workspace:*",
+    "@inlet/policy": "workspace:*",
+    "@inlet/sandbox": "workspace:*",
+    "@playwright/test": "1.65.0",
+    "zod": "^4.1.0",
+    "nodemailer": "^10.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "vitest": "^4.0.0",
+    "@types/nodemailer": "^8.0.2"
+  }
+}
