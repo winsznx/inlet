@@ -31,7 +31,9 @@ async function settle(
     await transitionIncident(incident.id, "patch_failed", { actor: "agent", reason: detail.reason });
     return;
   }
-  await transitionIncident(incident.id, incidentState, { actor: "agent", reason: detail.reason });
+  // patch_failed means a patch was tested and failed. If no candidate ever applied, none was tested.
+  const reachable = incidentState === "patch_failed" && incident.state === "investigating" ? "investigation_failed" : incidentState;
+  await transitionIncident(incident.id, reachable, { actor: "agent", reason: detail.reason });
 }
 
 export async function processInvestigation(investigationId: string): Promise<void> {

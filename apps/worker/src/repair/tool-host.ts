@@ -297,7 +297,10 @@ export class ControllerToolHost implements ToolHost {
     for (const file of rawDiffs) {
       applyError ??= await worktree.applyUnifiedDiff(file.unifiedDiff);
     }
-    if (applyError) return this.rejectCandidate("", [{ code: "apply_failed", message: applyError }], input.patchIntent);
+    if (applyError) {
+      const retryHint = rawDiffs.length > 0 ? " Send this change again using edits, copying each oldText exactly from the file." : "";
+      return this.rejectCandidate("", [{ code: "apply_failed", message: `${applyError}${retryHint}` }], input.patchIntent);
+    }
 
     const diff = await worktree.currentDiff();
     const guard = guardDiff(diff, connection.approvedPaths);
