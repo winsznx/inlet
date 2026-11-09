@@ -4,7 +4,8 @@ import { randomUUID } from "node:crypto";
 import { repoRoot } from "@inlet/config";
 
 const API = process.env.JUDGE_API_URL ?? "http://localhost:4000/api/v1";
-const ORIGIN = "http://localhost:3000";
+const ORIGIN = process.env.JUDGE_ORIGIN ?? "http://localhost:3000";
+const MAILPIT = process.env.JUDGE_MAILPIT_URL ?? "http://localhost:8025";
 
 export class JudgeFailure extends Error {}
 
@@ -63,7 +64,7 @@ export type Run = {
   delivery: { status: string | null; matchedAt: string | null };
   evidence: { id: string; kind: string; mime: string; sizeBytes: number }[];
   events: { type: string; summary: string }[];
-  sandboxes: { containerName: string; cleanupVerified: boolean; denialCount: number; exitReason: string | null; oomKilled: boolean | null; hardening: string[] }[];
+  sandboxes: { containerName: string; cleanupVerified: boolean; denialCount: number; exitReason: string | null; exitCode: number | null; oomKilled: boolean | null; hardening: string[] }[];
   policyDecisions: { allowed: boolean; target: string; reasonCode: string; layer: string }[];
 };
 
@@ -87,7 +88,7 @@ export function waitForRun(client: Client, runId: string, path = `/runs/${runId}
 }
 
 export async function mailpitCount(token: string): Promise<number> {
-  const response = await fetch(`http://localhost:8025/api/v1/search?query=${encodeURIComponent(`"${token}"`)}`);
+  const response = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`"${token}"`)}`);
   assert(response.ok, "Mailpit search failed");
   return ((await response.json()) as { messages_count: number }).messages_count;
 }

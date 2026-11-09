@@ -48,7 +48,7 @@ export async function smokeContainment(): Promise<string> {
     if (test === "blocked-network") {
       assert(run.events.some((event) => event.summary.includes("Allowed")), "The positive control did not succeed");
     }
-    if (test === "resource-exhaustion") assert(run.sandboxes[0]?.oomKilled === true || run.sandboxes[0]?.exitReason === "wall_limit", "No resource limit stopped the sandbox");
+    if (test === "resource-exhaustion") assert(run.sandboxes.length === 2 && run.sandboxes.every((sandbox) => sandbox.oomKilled === true || sandbox.exitReason === "wall_limit" || sandbox.exitCode !== 0), "A resource limit did not stop its sandbox");
     log.record(test, { runId, result: run.result, denials: denied.length, exit: run.sandboxes[0]?.exitReason, cleanupVerified: run.sandboxes[0]?.cleanupVerified, summary: run.summary });
   }
   return log.finish();

@@ -153,7 +153,13 @@ function forbiddenFile(): void {
   });
 }
 
-async function resourceExhaustion(): Promise<void> {
+async function processExhaustion(): Promise<void> {
+  emit({
+    probe: "pid-limit-start",
+    attempted: "Spawn processes in an unbounded loop",
+    outcome: "error",
+    detail: "Process creation started.",
+  });
   const script = "while :; do sleep 30 & done";
   const pids = await new Promise<{ spawned: boolean; detail: string }>((resolve) => {
     const child = spawn("sh", ["-c", script], { stdio: ["ignore", "ignore", "pipe"] });
@@ -177,11 +183,14 @@ async function resourceExhaustion(): Promise<void> {
     detail: pids.detail,
     exitStatus: pids.spawned ? "unbounded" : "EAGAIN",
   });
+}
+
+async function memoryExhaustion(): Promise<void> {
   emit({
     probe: "memory-limit-start",
-    attempted: "Allocate memory until the limit is reached. The container should be killed by the kernel.",
+    attempted: "Allocate memory without limit",
     outcome: "error",
-    detail: "Allocation started. A controller record of the exit reason follows.",
+    detail: "Allocation started.",
   });
   const chunks: Buffer[] = [];
   for (;;) {
@@ -193,7 +202,8 @@ async function resourceExhaustion(): Promise<void> {
 const probes: Record<string, () => Promise<void> | void> = {
   "blocked-network": blockedNetwork,
   "forbidden-file": forbiddenFile,
-  "resource-exhaustion": resourceExhaustion,
+  "process-exhaustion": processExhaustion,
+  "memory-exhaustion": memoryExhaustion,
 };
 
 const selected = probes[SELECTED_PROBE];

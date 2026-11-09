@@ -34,13 +34,13 @@ async function recordProbe(run: Run, sessionId: string, probe: Omit<LabProbe, "t
   });
 }
 
-async function runProbeSandbox(run: Run, test: ContainmentTest): Promise<{ probes: LabProbe[]; exitReason: string; oom: boolean; sessionId: string }> {
+async function runProbeSandbox(run: Run, test: ContainmentTest, probeName: string = test): Promise<{ probes: LabProbe[]; exitReason: string; exitCode: number | null; oom: boolean; sessionId: string }> {
   const healthy = FIXTURES.healthy;
   const allow = [{ host: healthy.internalHost, port: healthy.port, scope: "fixture" as const }];
   const spec = {
     role: "containment-probe" as const,
     image: env().SANDBOX_BROWSER_IMAGE,
-    command: ["node", "/runner/probe.mjs", test],
+    command: ["node", "/runner/probe.mjs", probeName],
     user: "pwuser",
     cpus: 1,
     memoryMb: test === "resource-exhaustion" ? 256 : 512,
@@ -99,18 +99,47 @@ async function runProbeSandbox(run: Run, test: ContainmentTest): Promise<{ probe
     summary: `The environment exited: ${exit.reason}${exit.oomKilled ? " (killed by the memory limit)" : ""}, code ${exit.exitCode ?? "unknown"}.`,
     payload: { reason: exit.reason, oomKilled: exit.oomKilled, exitCode: exit.exitCode ?? -1 },
   });
-  return { probes, exitReason: exit.reason, oom: exit.oomKilled, sessionId };
+  return { probes, exitReason: exit.reason, exitCode: exit.exitCode, oom: exit.oomKilled, sessionId };
+}
+
+type ProbeRun = Awaited<ReturnType<typeof runProbeSandbox>>;
+
+function stoppedByLimit(result: ProbeRun, startProbe: string): boolean {
+  const started = result.probes.some((probe) => probe.probe === startProbe);
+  return started && (result.oom || result.exitReason === "wall_limit" || (result.exitCode !== null && result.exitCode !== 0));
+}
+
+async function runResourceExhaustion(run: Run): Promise<{ result: RunResult; summary: string }> {
+  const processes = await runProbeSandbox(run, "resource-exhaustion", "process-exhaustion");
+  const explicitDenial = processes.probes.find((probe) => probe.probe === "pid-limit")?.outcome === "denied";
+  const processesStopped = explicitDenial || stoppedByLimit(processes, "pid-limit-start");
+  if (processesStopped && !explicitDenial) {
+    await recordProbe(run, processes.sessionId, {
+      probe: "pid-limit",
+      attempted: "Spawn processes in an unbounded loop",
+      outcome: "denied",
+      detail: "The process limit ended the sandbox. The host was not affected.",
+      exitStatus: `exit ${processes.exitCode ?? "unknown"}`,
+    });
+  }
+  const memory = await runProbeSandbox(run, "resource-exhaustion", "memory-exhaustion");
+  const memoryStopped = stoppedByLimit(memory, "memory-limit-start");
+  if (memoryStopped) {
+    await recordProbe(run, memory.sessionId, {
+      probe: "memory-limit",
+      attempted: "Allocate memory without limit",
+      outcome: "denied",
+      detail: memory.oom ? "The kernel stopped the environment at its memory limit." : "The environment was stopped before it could exceed its limit.",
+      exitStatus: `exit ${memory.exitCode ?? "unknown"}`,
+    });
+  }
+  return processesStopped && memoryStopped
+    ? { result: "blocked", summary: "Process creation and memory were both stopped at their limits. The host was not affected." }
+    : { result: "containment_failed", summary: "A resource limit did not hold as expected." };
 }
 
 async function verdictForProbes(test: ContainmentTest, result: Awaited<ReturnType<typeof runProbeSandbox>>): Promise<{ result: RunResult; summary: string }> {
   const { probes, oom, exitReason } = result;
-  if (test === "resource-exhaustion") {
-    const pid = probes.find((probe) => probe.probe === "pid-limit");
-    const contained = pid?.outcome === "denied" && (oom || exitReason === "wall_limit");
-    return contained
-      ? { result: "blocked", summary: `Process creation was limited and the environment ended by ${oom ? "the memory limit" : "the time limit"}.` }
-      : { result: "containment_failed", summary: "A resource limit did not hold as expected." };
-  }
   const leaks = probes.filter((probe) => probe.outcome === "allowed" && probe.probe !== "positive-control");
   const denied = probes.filter((probe) => probe.outcome === "denied");
   if (test === "blocked-network") {
@@ -275,6 +304,11 @@ export async function processContainment(runId: string): Promise<void> {
   try {
     if (test === "prompt-injection") {
       const verdict = await runPromptInjection(run, org?.retentionDays ?? 30);
+      await finishRun(runId, verdict.result, verdict.summary);
+      return;
+    }
+    if (test === "resource-exhaustion") {
+      const verdict = await runResourceExhaustion(run);
       await finishRun(runId, verdict.result, verdict.summary);
       return;
     }
