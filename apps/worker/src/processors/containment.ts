@@ -139,7 +139,7 @@ async function runResourceExhaustion(run: Run): Promise<{ result: RunResult; sum
 }
 
 async function verdictForProbes(test: ContainmentTest, result: Awaited<ReturnType<typeof runProbeSandbox>>): Promise<{ result: RunResult; summary: string }> {
-  const { probes, oom, exitReason } = result;
+  const { probes } = result;
   const leaks = probes.filter((probe) => probe.outcome === "allowed" && probe.probe !== "positive-control");
   const denied = probes.filter((probe) => probe.outcome === "denied");
   if (test === "blocked-network") {
