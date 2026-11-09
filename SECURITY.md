@@ -25,7 +25,7 @@ Every website, repository, email and model response is untrusted. An attacker ma
 
 ## Known limits
 
-- Local development uses Docker containers with `runc`. A container is not a microVM. The Vultr profile uses gVisor (`runsc`), and `infra/scripts/verify-sandbox.sh` has to pass on the real host before that isolation is relied on.
+- Local development uses Docker containers with `runc`. A container is not a microVM. The Vultr profile uses gVisor (`runsc`), and `infra/scripts/verify-sandbox.sh` has to pass on the real host before that isolation is relied on. It passed on the live Vultr host on 9 November 2026.
 - Chromium runs with `--no-sandbox` because the container is the sandbox.
 - The worker holds the Docker socket because it starts the sandboxes. Treat the worker host as trusted, and keep it separate from anything that handles untrusted input directly.
 - Webhook replay protection is held in memory and resets when the API restarts. Timestamps still expire after 5 minutes.

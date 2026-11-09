@@ -4,6 +4,8 @@ Inlet checks whether your website's enquiries actually reach the inbox, finds th
 
 A contact form can say "Message sent" while the notification behind it fails. Nobody finds out until a client asks why the leads stopped. Inlet is for the developer or agency responsible for those forms. It submits a marked test enquiry with a real browser, then looks for that exact enquiry at the destination.
 
+Live at <https://45.63.98.70.sslip.io>, running on Vultr. The public demo uses Inlet's own sample site and a private test inbox.
+
 ![A check where the form said sent and no message arrived](docs/images/run-not-received-1440.png)
 
 ## How the loop works
@@ -36,7 +38,7 @@ Open <http://localhost:3000> and sign in with `dev@inlet.test` / `inlet-local-de
 
 Monitoring, delivery checks and containment need no API key. For the agent, add `VULTR_INFERENCE_API_KEY` to `.env.local`. Without it the app says so and offers a labelled non-AI harness on the sample site, which applies a known fix so the rest of the path can be tested. It's never shown as a model result.
 
-To see the whole loop: add the "Acme Demo (missing notification)" sample, connect its sample repository, run a check, then follow the incident. The site's configuration page can reset the sample afterwards, and `pnpm smoke:inference` runs the full path by itself.
+To see the whole loop locally: add the "Acme Demo (missing notification)" sample, connect its sample repository, run a check, then follow the incident. The site's configuration page can reset the sample afterwards. With the local stack running, `pnpm smoke:local` checks delivery and silent failure; `pnpm smoke:inference` checks the real agent repair path when `VULTR_INFERENCE_API_KEY` is configured.
 
 ## How Vultr is used
 
@@ -44,8 +46,8 @@ To see the whole loop: add the "Acme Demo (missing notification)" sample, connec
 | --- | --- | --- |
 | Agent reasoning and tool calls | Serverless Inference, `api.vultrinference.com/v1` | `packages/agent/src/client.ts`, `packages/agent/src/loop.ts` |
 | Model choice from the live catalog | Serverless Inference `/models` | `packages/agent/src/catalog.ts` |
-| Web app, API, orchestration, database, sandboxes | Cloud Compute (planned, see Status) | `infra/docker-compose.prod.yml`, `infra/vultr/README.md` |
-| Sandbox runtime on the VM | gVisor on Cloud Compute (planned, see Status) | `packages/sandbox/src/oci.ts` |
+| Web app, API, orchestration, database, sandboxes | Cloud Compute, 4 vCPU and 16 GB in London | `infra/docker-compose.prod.yml`, `infra/vultr/README.md` |
+| Sandbox runtime on the VM | gVisor (`runsc`) on Cloud Compute | `packages/sandbox/src/oci.ts` |
 
 The model running here is `deepseek-v4.1-flash-1017`, selected from the live catalog only if it advertises tool calling. Every request's response ID, timing and token count is stored with the investigation and shown on the incident.
 
@@ -67,25 +69,41 @@ The Sandbox lab runs real attempts against these limits, and each one records th
 | Request the authorized site through the gateway | HTTP 200, proving the denials aren't just a broken network |
 | Write to the root filesystem or overwrite the runner | `EROFS` |
 | Read `/etc/shadow` | `EACCES` |
-| Fork bomb, then allocate memory without limit | Process creation fails, then the kernel kills the container |
+| Fork bomb, then allocate memory without limit, each in its own sandbox | Stopped at the process and memory limits. Under plain Docker process creation fails with `EAGAIN`. Under gVisor the memory cgroup ends the sandbox |
 | Follow a prompt injection on a controlled attack page | The gateway denies the host and the controller refuses the tool call |
 
 See [SECURITY.md](SECURITY.md) for the full list of boundaries and their limits.
 
 ## Results
 
-Measured on one Mac (Apple Silicon, Docker Desktop) on 8 November 2026, against Inlet's own sample site and deliberately injected fault. These are not customer incidents.
+These all use Inlet's own sample site and one deliberately injected fault. None of them are customer incidents.
+
+On the live Vultr server with gVisor, 9 November 2026:
+
+| What | Result |
+| --- | --- |
+| Delivery check on a healthy form | The enquiry reached the private inbox |
+| Silent failure on a broken form | The form showed success, nothing arrived, and an incident opened |
+| Model investigations after the fixes below | 3 of 3 reached a tested patch and verified recovery. Each needed a second attempt |
+| Model investigations before those fixes | 2 of 2 failed |
+| Candidate patches across all 5 runs | 8 rejected before testing, 4 went on to testing |
+| Inference calls to Vultr | 97, with 0 errors. Estimated cost $0.11 from catalog prices |
+| Containment attempts | Network, filesystem, prompt-injection and resource tests all ended blocked |
+| Sandboxes removed and confirmed gone | 46 of 46 |
+
+The two failed runs found real problems that local testing couldn't. Docker's embedded DNS doesn't work inside gVisor on a user-defined network, so the preview browser couldn't find the app. In the other, all three of the model's unified diffs were malformed and the worker crashed recording that. Sandboxes now get their peers' addresses directly, and a rejected diff tells the model to resend with exact edits.
+
+On one Mac (Apple Silicon, Docker Desktop, plain Docker), 8 November 2026:
 
 | What | Result |
 | --- | --- |
 | Model investigations on the injected fault | 3 of 3 produced a tested patch. 3 went on to verified recovery after approval and deployment |
 | Candidate patches from the model | 5 rejected before testing because the diff was malformed or didn't apply, 3 accepted and passed every check |
 | Inference calls to Vultr | 52, with 0 errors. Estimated cost $0.05 from catalog prices |
-| Containment attempts | Every run of the network, filesystem, prompt-injection and resource tests ended blocked |
 | Sandboxes removed and confirmed gone | 93 of 94 |
 | Worker killed right after the submission step | The enquiry was not resubmitted. One message arrived, and the run ended as `unverified` |
 
-The sample size is small and uses one known fault, so it shows the path works and says nothing about how often the agent would fix other bugs. The misses matter: the model's first attempts at a unified diff often fail, and the guard rejects them before anything runs.
+The sample size is small and uses one known fault, so it shows the path works and says nothing about how often the agent would fix other bugs.
 
 ## Architecture
 
@@ -124,7 +142,10 @@ pnpm test:integration    # live stack, real browser runs, real IMAP server
 pnpm test:security       # live stack, secret scan and dependency audit
 pnpm test:e2e            # the whole lifecycle through the real UI
 pnpm test:visual         # responsive layout and accessibility, 320 to 1920 px
-pnpm test:judge          # exits nonzero if any required evidence is missing
+pnpm test:judge          # full evidence gate; needs the live stack and inference key
+pnpm smoke:local         # delivery and silent-failure fixture checks
+pnpm smoke:inference     # real Vultr agent repair and recovery check
+pnpm smoke:containment   # network, filesystem, prompt-injection and resource checks
 pnpm smoke:crash         # kills the worker mid-run. Stop the dev worker first
 ```
 
@@ -136,7 +157,7 @@ Forms behind a CAPTCHA aren't supported because Inlet doesn't try to bypass them
 
 ## Status
 
-Everything above has run locally. Inlet hasn't been deployed to Vultr yet, so the Cloud Compute and gVisor rows describe the prepared deployment in `infra/`, not a live one, and the gVisor path hasn't been tested on a real host. GitHub pull request creation has only been tested against a GitHub-shaped local server because it needs a GitHub App. Dark mode isn't built.
+Inlet runs on Vultr at the address above, with Serverless Inference and gVisor sandboxes. The address is an `sslip.io` name on the server's IP. Delivery on that server goes to a private Mailpit, so it hasn't sent to a real public mailbox. IMAP has been tested against a local GreenMail server. Crash recovery has only been tested locally. GitHub pull request creation has only been tested against a GitHub-shaped local server because it needs a GitHub App. Dark mode isn't built.
 
 ## License
 

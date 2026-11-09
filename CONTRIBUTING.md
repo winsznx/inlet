@@ -12,9 +12,12 @@ pnpm lint
 pnpm test:unit
 pnpm test:integration   # needs the local stack
 pnpm test:security      # needs the local stack
+pnpm test:judge         # full evidence gate; needs the local stack and inference key
 ```
 
 If you changed anything a user can see, also run `pnpm test:e2e` and `pnpm test:visual`, and look at the screenshots in `.local-artifacts/qa/screens`.
+
+The `smoke:*` commands use the controlled fixtures and write evidence under `.local-artifacts/qa/`. Do not describe the non-AI harness as a model result. Keep credentials in ignored local environment files; never put them in source, fixtures, prompts, artifacts or screenshots.
 
 ## Ground rules
 

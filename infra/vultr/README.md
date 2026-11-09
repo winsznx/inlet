@@ -1,6 +1,6 @@
 # Deploying Inlet on Vultr
 
-Nothing here has been run against a live Vultr instance yet. Treat the steps as the deployment plan, and run `verify-sandbox.sh` on the real host before relying on any isolation claim.
+These steps deployed the instance behind the live demo on 9 November 2026. Run `verify-sandbox.sh` on your own host before relying on any isolation claim.
 
 ## What runs where
 
