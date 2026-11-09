@@ -12,7 +12,7 @@ Use a plan with at least 4 vCPU and 8 GB of memory. A repair run holds two 2 GB 
 
 1. Create the instance with an SSH key and a non-root deploy user. Open only 22, 80 and 443 in the firewall.
 2. Install Docker Engine and the compose plugin.
-3. Install gVisor, copy `vultr/gvisor-daemon.json` to `/etc/docker/daemon.json`, and restart Docker.
+3. Install gVisor from its apt repository, which puts `runsc` at `/usr/bin/runsc`, then copy `infra/vultr/gvisor-daemon.json` to `/etc/docker/daemon.json` and restart Docker. The commands are below the list.
 4. Clone the repository and copy `infra/production.env.example` to `infra/production.env`. Fill in every secret.
 5. Export `INLET_DOMAIN`, `ACME_EMAIL`, `POSTGRES_PASSWORD`, `FIXTURE_CONTROL_TOKEN`, `EGRESS_CONTROL_TOKEN` and `DOCKER_GID` (`stat -c %g /var/run/docker.sock`).
 6. Point the domain at the instance.
@@ -23,6 +23,17 @@ infra/scripts/check-prereqs.sh
 infra/scripts/deploy.sh --apply
 infra/scripts/verify-sandbox.sh --apply
 infra/scripts/smoke-production.sh
+```
+
+Installing gVisor (step 3):
+
+```sh
+curl -fsSL https://gvisor.dev/archive.key | gpg --batch --yes --dearmor -o /usr/share/keyrings/gvisor-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/gvisor-archive-keyring.gpg] https://storage.googleapis.com/gvisor/releases release main" > /etc/apt/sources.list.d/gvisor.list
+apt-get update && apt-get install -y runsc
+cp infra/vultr/gvisor-daemon.json /etc/docker/daemon.json
+systemctl restart docker
+docker info --format '{{json .Runtimes}}' | grep runsc
 ```
 
 ## Sandbox backend

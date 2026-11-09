@@ -33,7 +33,13 @@ function networkArgs(plan: NetworkPlan, ip: string | null): string[] {
     case "none":
       return ["--network", "none"];
     case "private":
-      return ["--network", plan.network, ...(plan.alias ? ["--network-alias", plan.alias] : []), "--dns", "127.0.0.1"];
+      return [
+        "--network",
+        plan.network,
+        ...Object.entries(plan.hosts ?? {}).flatMap(([name, address]) => ["--add-host", `${name}:${address}`]),
+        "--dns",
+        "127.0.0.1",
+      ];
     case "egress":
       return ["--network", env().SANDBOX_NETWORK, "--ip", ip ?? "", "--dns", "127.0.0.1"];
   }

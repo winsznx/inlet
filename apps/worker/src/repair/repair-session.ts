@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { env } from "@inlet/config";
 import { repairMessageSchema } from "@inlet/domain";
 import type { RepairProfile, RepairResult } from "@inlet/domain";
-import { createPreviewEnvironment, createVolume, ensureDependencyVolume, removeVolume, SINK_ALIAS } from "@inlet/sandbox";
+import { containerAddress, createPreviewEnvironment, createVolume, ensureDependencyVolume, removeVolume, SINK_ALIAS } from "@inlet/sandbox";
 import type { PreviewEnvironment, SandboxHandle } from "@inlet/sandbox";
 import { commandForProfile } from "@inlet/policy";
 import type { PackageManager } from "@inlet/policy";
@@ -141,7 +141,7 @@ export class RepairSession {
           { path: "/tmp", sizeMb: 256, exec: true },
           { path: "/work/app", sizeMb: REPAIR_LIMITS.workspaceMb, exec: true },
         ],
-        network: { mode: "private" as const, network: preview.networkName, alias: PREVIEW_ALIAS },
+        network: { mode: "private" as const, network: preview.networkName, hosts: { [SINK_ALIAS]: preview.sinkAddress } },
         volumes: [{ name: config.dependencyVolume, target: "/work/app/node_modules", readOnly: true }],
         env: { HOME: "/tmp/home" },
       };
@@ -161,6 +161,10 @@ export class RepairSession {
       await preview.destroy();
       throw error;
     }
+  }
+
+  async previewAppAddress(): Promise<string> {
+    return containerAddress(this.handle.containerName, this.preview.networkName);
   }
 
   private begin(config: RepairSessionConfig): void {

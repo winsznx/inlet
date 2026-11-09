@@ -13,6 +13,7 @@ export type PreviewEnvironment = {
   networkName: string;
   sinkContainer: string;
   sinkApiUrl: string;
+  sinkAddress: string;
   destroy(): Promise<{ verified: boolean; error?: string }>;
 };
 
@@ -46,18 +47,27 @@ export async function createPreviewEnvironment(sessionId: string): Promise<Previ
       "64",
       env().SANDBOX_SINK_IMAGE,
     ]);
-    await docker(["network", "connect", "--alias", SINK_ALIAS, networkName, sinkContainer]);
+    await docker(["network", "connect", networkName, sinkContainer]);
+    const sinkAddress = await containerAddress(sinkContainer, networkName);
     const sinkApiUrl = overNetwork ? `http://${sinkContainer}:8025` : await publishedSinkUrl(sinkContainer);
     for (let attempt = 0; attempt < 40; attempt += 1) {
       const response = await fetch(`${sinkApiUrl}/readyz`, { signal: AbortSignal.timeout(1_000) }).catch(() => null);
       if (response?.ok) break;
       await new Promise((resolve) => setTimeout(resolve, 150));
     }
-    return { networkName, sinkContainer, sinkApiUrl, destroy: () => destroyPreview(networkName, sinkContainer) };
+    return { networkName, sinkContainer, sinkApiUrl, sinkAddress, destroy: () => destroyPreview(networkName, sinkContainer) };
   } catch (error) {
     await destroyPreview(networkName, sinkContainer);
     throw error;
   }
+}
+
+// gVisor's netstack cannot reach Docker's embedded DNS on a user-defined network,
+// so preview sandboxes get their peers' addresses through --add-host instead.
+export async function containerAddress(containerName: string, networkName: string): Promise<string> {
+  const address = await docker(["inspect", "--format", `{{(index .NetworkSettings.Networks "${networkName}").IPAddress}}`, containerName]);
+  if (!address) throw new Error(`Container ${containerName} has no address on ${networkName}`);
+  return address;
 }
 
 async function publishedSinkUrl(sinkContainer: string): Promise<string> {

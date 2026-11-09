@@ -5,7 +5,7 @@ export type SandboxRole = "browser" | "repair" | "preview-browser" | "dependency
 export type NetworkPlan =
   | { mode: "egress"; allow: EgressAllowEntry[] }
   | { mode: "none" }
-  | { mode: "private"; network: string; alias?: string };
+  | { mode: "private"; network: string; hosts?: Record<string, string> };
 
 export type SandboxSpec = {
   sessionId: string;

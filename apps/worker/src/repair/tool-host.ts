@@ -498,7 +498,7 @@ export class ControllerToolHost implements ToolHost {
         token,
         navigationTimeoutMs: 20_000,
       },
-      network: { mode: "private", network: session.preview.networkName },
+      network: { mode: "private", network: session.preview.networkName, hosts: { [PREVIEW_ALIAS]: await session.previewAppAddress() } },
       retentionDays: this.context.retentionDays,
       callbacks: { onSubmitRequest: async () => true },
     });
